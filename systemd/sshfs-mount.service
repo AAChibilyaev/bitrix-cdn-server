@@ -1,0 +1,27 @@
+[Unit]
+Description=SSHFS mount for Bitrix files
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+User=root
+Group=root
+
+# Команда монтирования
+ExecStart=/usr/bin/sshfs \
+    -o allow_other,default_permissions,ro,cache=yes,kernel_cache,compression=no,large_read,big_writes,ServerAliveInterval=15,ServerAliveCountMax=3,reconnect,IdentityFile=/root/.ssh/bitrix_mount,StrictHostKeyChecking=no \
+    user@bitrix-server:/path/to/bitrix/upload /mnt/bitrix
+
+# Команда размонтирования
+ExecStop=/usr/bin/fusermount -u /mnt/bitrix
+
+# Перезапуск при сбое
+Restart=on-failure
+RestartSec=10
+
+# Проверка что mount работает
+ExecStartPost=/bin/sh -c 'sleep 2 && ls /mnt/bitrix > /dev/null'
+
+[Install]
+WantedBy=multi-user.target

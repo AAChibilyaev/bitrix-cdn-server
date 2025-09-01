@@ -1,0 +1,248 @@
+version: '3.8'
+
+services:
+  # NGINX с модулем для обработки изображений
+  nginx:
+    image: nginx:alpine
+    container_name: cdn-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Конфигурация NGINX
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      
+      # SSL сертификаты
+      - ./docker/ssl:/etc/nginx/ssl:ro
+      - ./docker/certbot/www:/var/www/certbot:ro
+      - ./docker/certbot/conf:/etc/letsencrypt:ro
+      
+      # Примонтированные файлы Битрикс (read-only)
+      - bitrix-files:/mnt/bitrix:ro
+      
+      # Кеш WebP файлов
+      - webp-cache:/var/cache/webp
+      
+      # Логи
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - webp-converter
+      - sshfs
+    networks:
+      - cdn-network
+    environment:
+      - NGINX_HOST=${CDN_DOMAIN}
+      - NGINX_PORT=80
+
+  # Сервис конвертации изображений в WebP
+  webp-converter:
+    build: 
+      context: ./docker/webp-converter
+      dockerfile: Dockerfile
+    container_name: cdn-webp-converter
+    restart: unless-stopped
+    volumes:
+      # Доступ к оригинальным файлам
+      - bitrix-files:/mnt/bitrix:ro
+      
+      # Кеш WebP
+      - webp-cache:/var/cache/webp
+      
+      # Логи
+      - ./logs/converter:/var/log/converter
+    environment:
+      - WEBP_QUALITY=${WEBP_QUALITY:-85}
+      - MAX_WIDTH=${WEBP_MAX_WIDTH:-2048}
+      - MAX_HEIGHT=${WEBP_MAX_HEIGHT:-2048}
+      - CACHE_DIR=/var/cache/webp
+      - SOURCE_DIR=/mnt/bitrix
+    networks:
+      - cdn-network
+    # Ограничение ресурсов для конвертера
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # SSHFS монтирование файлов с сервера Битрикс
+  sshfs:
+    build:
+      context: ./docker/sshfs
+      dockerfile: Dockerfile
+    container_name: cdn-sshfs
+    restart: unless-stopped
+    privileged: true
+    cap_add:
+      - SYS_ADMIN
+    devices:
+      - /dev/fuse
+    volumes:
+      # SSH ключи
+      - ./docker/ssh:/root/.ssh:ro
+      
+      # Точка монтирования
+      - bitrix-files:/mnt/bitrix:shared
+      
+      # Логи
+      - ./logs/sshfs:/var/log/sshfs
+    environment:
+      - REMOTE_HOST=${BITRIX_SERVER_IP}
+      - REMOTE_USER=${BITRIX_SERVER_USER}
+      - REMOTE_PATH=${BITRIX_UPLOAD_PATH}
+      - MOUNT_POINT=/mnt/bitrix
+      - SSH_KEY=/root/.ssh/bitrix_mount
+    networks:
+      - cdn-network
+    healthcheck:
+      test: ["CMD", "mountpoint", "-q", "/mnt/bitrix"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis для кеширования метаданных
+  redis:
+    image: redis:7-alpine
+    container_name: cdn-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - cdn-network
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+
+  # Varnish для дополнительного кеширования (опционально)
+  varnish:
+    image: varnish:7
+    container_name: cdn-varnish
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./docker/varnish/default.vcl:/etc/varnish/default.vcl:ro
+    environment:
+      - VARNISH_SIZE=1G
+    depends_on:
+      - nginx
+    networks:
+      - cdn-network
+    command: ["-F", "-f", "/etc/varnish/default.vcl", "-a", ":80", "-s", "malloc,1G"]
+
+  # Prometheus для мониторинга
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: cdn-prometheus
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./docker/prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - cdn-network
+
+  # Grafana для визуализации метрик
+  grafana:
+    image: grafana/grafana:latest
+    container_name: cdn-grafana
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=redis-datasource
+    depends_on:
+      - prometheus
+    networks:
+      - cdn-network
+
+  # NGINX Exporter для метрик
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:latest
+    container_name: cdn-nginx-exporter
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9113:9113"
+    command:
+      - -nginx.scrape-uri=http://nginx/nginx_status
+    depends_on:
+      - nginx
+    networks:
+      - cdn-network
+
+  # Certbot для SSL сертификатов
+  certbot:
+    image: certbot/certbot:latest
+    container_name: cdn-certbot
+    volumes:
+      - ./docker/certbot/conf:/etc/letsencrypt
+      - ./docker/certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - cdn-network
+
+  # Healthcheck сервис
+  healthcheck:
+    build:
+      context: ./docker/healthcheck
+      dockerfile: Dockerfile
+    container_name: cdn-healthcheck
+    restart: unless-stopped
+    volumes:
+      - ./logs:/var/log/cdn:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - ALERT_EMAIL=${ADMIN_EMAIL}
+      - CHECK_INTERVAL=300
+    networks:
+      - cdn-network
+    depends_on:
+      - nginx
+      - webp-converter
+      - sshfs
+
+volumes:
+  # Примонтированные файлы Битрикс
+  bitrix-files:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/bitrix
+  
+  # Кеш WebP файлов
+  webp-cache:
+    driver: local
+  
+  # Redis данные
+  redis-data:
+    driver: local
+  
+  # Prometheus данные
+  prometheus-data:
+    driver: local
+  
+  # Grafana данные
+  grafana-data:
+    driver: local
+
+networks:
+  cdn-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/24
