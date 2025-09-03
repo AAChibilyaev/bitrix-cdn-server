@@ -1,11 +1,13 @@
 #!/bin/bash
 # Скрипт деплоя CDN конфигурации на удаленный сервер
 # Запускать с локальной машины
+# Author: Chibilyaev Alexandr <info@aachibilyaev.com>
+# Company: AAChibilyaev LTD
 
 # Конфигурация
 REMOTE_SERVER=""  # IP адрес CDN сервера
 REMOTE_USER="root"
-REMOTE_PATH="/root/bitrix-cdn-server"
+REMOTE_PATH="/root/bitrix-cdn"
 
 # Цвета
 GREEN='\033[0;32m'
@@ -25,7 +27,7 @@ echo "Deploying to $REMOTE_USER@$REMOTE_SERVER..."
 
 # Создание архива
 echo "Creating archive..."
-tar -czf /tmp/bitrix-cdn-server.tar.gz \
+tar -czf /tmp/bitrix-cdn.tar.gz \
     --exclude='.git' \
     --exclude='*.log' \
     --exclude='deploy.sh' \
@@ -33,39 +35,39 @@ tar -czf /tmp/bitrix-cdn-server.tar.gz \
 
 # Копирование на сервер
 echo "Copying to server..."
-scp /tmp/bitrix-cdn-server.tar.gz "$REMOTE_USER@$REMOTE_SERVER:/tmp/"
+scp /tmp/bitrix-cdn.tar.gz "$REMOTE_USER@$REMOTE_SERVER:/tmp/"
 
 # Распаковка и установка
 echo "Installing on server..."
 ssh "$REMOTE_USER@$REMOTE_SERVER" <<'ENDSSH'
     # Создание директории
-    mkdir -p /root/bitrix-cdn-server
+    mkdir -p /root/bitrix-cdn
     
     # Распаковка
-    cd /root/bitrix-cdn-server
-    tar -xzf /tmp/bitrix-cdn-server.tar.gz
+    cd /root/bitrix-cdn
+    tar -xzf /tmp/bitrix-cdn.tar.gz
     
     # Установка прав
     chmod +x scripts/*.sh
     chmod +x monitoring/*.sh
     
     # Очистка
-    rm /tmp/bitrix-cdn-server.tar.gz
+    rm /tmp/bitrix-cdn.tar.gz
     
     echo "Files deployed successfully"
     echo ""
     echo "Now run on the server:"
-    echo "cd /root/bitrix-cdn-server"
+    echo "cd /root/bitrix-cdn"
     echo "./scripts/install.sh"
 ENDSSH
 
 # Очистка локального архива
-rm /tmp/bitrix-cdn-server.tar.gz
+rm /tmp/bitrix-cdn.tar.gz
 
 echo -e "${GREEN}Deployment complete!${NC}"
 echo ""
 echo "Next steps:"
 echo "1. SSH to $REMOTE_SERVER"
-echo "2. cd /root/bitrix-cdn-server"
+echo "2. cd /root/bitrix-cdn"
 echo "3. Review config.sh.example and create config.sh"
 echo "4. Run ./scripts/install.sh"

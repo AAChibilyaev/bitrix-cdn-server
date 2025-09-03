@@ -1,6 +1,8 @@
 #!/bin/bash
 # Скрипт синхронизации кеша при изменении файлов на Битрикс сервере
 # Запускается на CDN сервере для очистки устаревших WebP версий
+# Author: Chibilyaev Alexandr <info@aachibilyaev.com>
+# Company: AAChibilyaev LTD
 
 set -e
 

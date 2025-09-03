@@ -1,6 +1,8 @@
 #!/bin/bash
 # Скрипт валидации всех конфигураций Bitrix CDN Server
 # Проверяет синтаксис всех конфигурационных файлов по официальной документации
+# Author: Chibilyaev Alexandr <info@aachibilyaev.com>
+# Company: AAChibilyaev LTD
 
 set -e
 

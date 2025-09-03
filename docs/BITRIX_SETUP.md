@@ -1,5 +1,7 @@
 # 🔧 Интеграция CDN с Битрикс
 
+**Автор**: Chibilyaev Alexandr | **AAChibilyaev LTD** | info@aachibilyaev.com
+
 ## 📋 Содержание
 
 1. [Быстрая настройка](#быстрая-настройка)

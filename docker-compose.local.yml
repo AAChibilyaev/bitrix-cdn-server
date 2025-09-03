@@ -1,4 +1,7 @@
-# Local testing version for MacBook without SSHFS
+# Bitrix CDN Server - Local Testing Configuration
+# Author: Chibilyaev Alexandr <info@aachibilyaev.com>  
+# Company: AAChibilyaev LTD
+# Local testing version without external dependencies
 services:
   # NGINX
   nginx:

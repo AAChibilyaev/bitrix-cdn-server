@@ -1,5 +1,7 @@
 # ⚡ Оптимизация производительности CDN
 
+**Автор**: Chibilyaev Alexandr | **AAChibilyaev LTD** | info@aachibilyaev.com
+
 ## 📊 Метрики производительности
 
 ### Целевые показатели

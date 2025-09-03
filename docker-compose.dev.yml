@@ -1,3 +1,6 @@
+# Bitrix CDN Server - Development Configuration  
+# Author: Chibilyaev Alexandr <info@aachibilyaev.com>
+# Company: AAChibilyaev LTD
 # Simplified development version without monitoring
 services:
   # NGINX

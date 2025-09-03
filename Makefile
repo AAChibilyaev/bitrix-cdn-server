@@ -1,4 +1,6 @@
 # Makefile для управления CDN сервером
+# Author: Chibilyaev Alexandr <info@aachibilyaev.com>
+# Company: AAChibilyaev LTD
 
 .PHONY: help install deploy test health clean backup restore
 

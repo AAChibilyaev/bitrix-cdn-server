@@ -43,8 +43,8 @@ sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-
 sudo chmod +x /usr/local/bin/docker-compose
 
 # 1.3 Клонирование проекта
-git clone https://github.com/yourusername/bitrix-cdn-server.git
-cd bitrix-cdn-server
+git clone https://github.com/AAChibilyaev/bitrix-cdn.git
+cd bitrix-cdn
 ```
 
 ### ШАГ 2: Настройка SSH соединения между серверами
@@ -174,7 +174,7 @@ curl -H "Accept: image/webp" https://cdn.termokit.ru/upload/iblock/123/test.jpg
 # В логах должна появиться конвертация
 
 # 7.3 Проверка кеша
-ls -la /var/lib/docker/volumes/bitrix-cdn-server_webp-cache/_data/
+ls -la /var/lib/docker/volumes/bitrix-cdn_webp-cache/_data/
 # Должны появиться .webp файлы
 
 # 7.4 Мониторинг
@@ -245,7 +245,7 @@ docker network ls
 ### Автоматическая очистка кеша:
 ```bash
 # Добавьте в crontab на Сервере 2
-0 3 * * * /path/to/bitrix-cdn-server/docker-manage.sh clean
+0 3 * * * /path/to/bitrix-cdn/docker-manage.sh clean
 ```
 
 ## 🎯 Финальная проверка

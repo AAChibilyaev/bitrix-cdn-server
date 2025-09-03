@@ -1,3 +1,7 @@
+# Bitrix CDN SSHFS Mount Service
+# Author: Chibilyaev Alexandr <info@aachibilyaev.com>
+# Company: AAChibilyaev LTD
+
 [Unit]
 Description=SSHFS mount for Bitrix files
 After=network-online.target

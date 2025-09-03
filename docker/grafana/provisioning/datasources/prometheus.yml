@@ -9,7 +9,7 @@ datasources:
     editable: true
     jsonData:
       timeInterval: "15s"
-      
+
   - name: Redis
     type: redis-datasource
     access: proxy

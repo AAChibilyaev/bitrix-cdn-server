@@ -1,5 +1,7 @@
 # 🔄 Поток обработки данных в CDN
 
+**Автор**: Chibilyaev Alexandr | **AAChibilyaev LTD** | info@aachibilyaev.com
+
 ## 📋 Содержание
 
 1. [Основной поток запроса](#основной-поток-запроса)
@@ -24,33 +26,29 @@ sequenceDiagram
     U->>N: GET /upload/image.jpg
     N->>N: Check Accept: image/webp
     
-    alt WebP поддерживается
-        N->>V: Check Varnish cache
-        alt Cache HIT in Varnish
-            V->>U: Return cached WebP
-        else Cache MISS in Varnish
-            N->>C: Check disk cache
-            alt Cache HIT on disk
-                C->>N: Read image.jpg.webp
-                N->>V: Store in Varnish
-                N->>U: Return WebP
-            else Cache MISS on disk
-                N->>W: Request conversion
-                W->>S: Read original via SSHFS
-                S->>B: SSH connection
-                B->>S: Return image data
-                W->>W: Convert to WebP
-                W->>C: Save to cache
-                W->>R: Store metadata
-                W->>N: Return WebP
-                N->>V: Store in Varnish
-                N->>U: Return WebP
-            end
+    N->>N: map $http_accept -> $webp_suffix
+    
+    alt WebP поддерживается ($webp_suffix = ".webp")
+        N->>C: try_files /var/cache/webp$uri.webp
+        alt Cache HIT
+            C->>U: Return WebP from cache
+        else Cache MISS
+            N->>W: @webp_convert location
+            W->>S: Read original via SSHFS
+            S->>B: SSH connection
+            B->>S: Return image data
+            W->>W: Convert to WebP (cwebp)
+            W->>C: Save to /var/cache/webp
+            W->>R: Store metadata
+            W->>U: Return WebP
         end
-    else WebP не поддерживается
-        N->>S: Read original
-        S->>B: Get file
-        N->>U: Return JPEG/PNG
+    else WebP не поддерживается ($webp_suffix = "")
+        N->>C: try_files $uri (original)
+        alt Original exists
+            C->>U: Return JPEG/PNG
+        else File not found
+            N->>U: 404 Not Found
+        end
     end
 ```
 
@@ -88,19 +86,28 @@ sequenceDiagram
 **Автоматическая инвалидация кеша**
 
 ```python
-# File watcher в WebP Converter
+# File watcher в WebP Converter (converter.py)
 def on_modified(self, event):
-    if event.src_path.endswith(('.jpg', '.png')):
-        # Удаляем старую WebP версию
-        cache_path = get_cache_path(event.src_path)
-        if cache_path.exists():
-            cache_path.unlink()
-        
-        # Удаляем из Redis
-        redis_client.delete(f"webp:{event.src_path}")
-        
-        # Инвалидируем Varnish
-        purge_varnish_cache(event.src_path)
+    if not event.is_directory:
+        path = Path(event.src_path)
+        if path.suffix.lower() in self.converter.supported_formats:
+            logger.info(f"Image modified: {path}")
+            # Сконвертируем со перезаписью кеша
+            self.converter.convert_image(path)
+
+def on_deleted(self, event):
+    if not event.is_directory:
+        path = Path(event.src_path)
+        if path.suffix.lower() in self.converter.supported_formats:
+            # Удаляем соответствующий WebP
+            cache_path = self.converter.get_cache_path(path)
+            if cache_path.exists():
+                logger.info(f"Removing WebP for deleted image: {path}")
+                cache_path.unlink()
+                
+                # Удаляем из Redis
+                if redis_client:
+                    redis_client.delete(f"webp:{path}")
 ```
 
 ## 🗄️ Уровни кеширования
@@ -112,7 +119,7 @@ Expires: Wed, 01 Jan 2025 00:00:00 GMT
 ETag: "686897696a7c876b7e"
 ```
 
-### Level 2: Varnish (RAM)
+### Level 2: Varnish (RAM) - ОПЦИОНАЛЬНО
 ```vcl
 sub vcl_backend_response {
     if (bereq.url ~ "\.(jpg|jpeg|png|gif|webp)$") {
@@ -121,6 +128,8 @@ sub vcl_backend_response {
     }
 }
 ```
+
+⚠️ **ПРИМЕЧАНИЕ**: Varnish не обязателен - можно использовать docker-compose.dev.yml без него
 
 ### Level 3: NGINX (Disk)
 ```nginx

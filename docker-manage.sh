@@ -1,5 +1,7 @@
 #!/bin/bash
 # Docker CDN Management Script
+# Author: Chibilyaev Alexandr <info@aachibilyaev.com>
+# Company: AAChibilyaev LTD
 
 set -e
 

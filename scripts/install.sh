@@ -1,6 +1,8 @@
 #!/bin/bash
 # Автоматический установщик CDN сервера для Битрикс
 # /scripts/install.sh
+# Author: Chibilyaev Alexandr <info@aachibilyaev.com>
+# Company: AAChibilyaev LTD
 
 set -e  # Останавливаться при ошибках
 
@@ -345,8 +347,8 @@ print_instructions() {
     echo "   tail -f /var/log/nginx/error.log"
     echo ""
     echo "Documentation:"
-    echo "   /root/bitrix-cdn-server/docs/INSTALL.md"
-    echo "   /root/bitrix-cdn-server/docs/TROUBLESHOOTING.md"
+    echo "   /root/bitrix-cdn/docs/INSTALL.md"
+    echo "   /root/bitrix-cdn/docs/TROUBLESHOOTING.md"
     echo ""
 }
 

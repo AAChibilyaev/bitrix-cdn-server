@@ -1,6 +1,8 @@
 #!/bin/bash
 # Скрипт конвертации изображений в WebP
 # /usr/local/bin/webp-convert.sh
+# Author: Chibilyaev Alexandr <info@aachibilyaev.com>
+# Company: AAChibilyaev LTD
 
 # Конфигурация
 MOUNT_DIR="/mnt/bitrix"

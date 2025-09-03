@@ -1,6 +1,8 @@
 #!/bin/bash
 # Скрипт монтирования папки Битрикс через SSHFS
 # /usr/local/bin/mount-bitrix.sh
+# Author: Chibilyaev Alexandr <info@aachibilyaev.com>
+# Company: AAChibilyaev LTD
 
 # Конфигурация
 REMOTE_USER="user"

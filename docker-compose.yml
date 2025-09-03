@@ -1,3 +1,7 @@
+# Bitrix CDN Server - Production Configuration
+# Author: Chibilyaev Alexandr <info@aachibilyaev.com>
+# Company: AAChibilyaev LTD
+
 services:
   # NGINX с модулем для обработки изображений
   nginx:

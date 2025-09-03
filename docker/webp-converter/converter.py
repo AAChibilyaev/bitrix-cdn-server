@@ -2,6 +2,9 @@
 """
 WebP Converter Service
 Monitors directories and converts images to WebP format on demand
+
+Author: Chibilyaev Alexandr <info@aachibilyaev.com>
+Company: AAChibilyaev LTD
 """
 
 import os

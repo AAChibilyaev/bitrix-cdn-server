@@ -1,11 +1,13 @@
 #!/bin/bash
 # Скрипт проверки состояния CDN сервера
 # /usr/local/bin/check-cdn-health.sh
+# Author: Chibilyaev Alexandr <info@aachibilyaev.com>
+# Company: AAChibilyaev LTD
 
 # Конфигурация
 MOUNT_POINT="/mnt/bitrix"
 CACHE_DIR="/var/cache/webp"
-ALERT_EMAIL="admin@yourdomain.ru"
+ALERT_EMAIL="info@aachibilyaev.com"
 LOG_FILE="/var/log/cdn/health.log"
 NGINX_STATUS_URL="http://127.0.0.1/nginx_status"
 
