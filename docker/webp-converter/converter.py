@@ -118,14 +118,24 @@ class WebPConverter:
                 # Get new size
                 webp_size = cache_path.stat().st_size
                 saved = original_size - webp_size
-                saved_percent = (saved / original_size) * 100
+                # Правильный расчёт: положительное значение = экономия, отрицательное = увеличение
+                if original_size > 0:
+                    saved_percent = (saved / original_size) * 100
+                else:
+                    saved_percent = 0
                 
                 self.stats['converted'] += 1
                 self.stats['total_saved'] += saved
                 
-                logger.info(f"Converted {source_path.name}: "
-                          f"{original_size:,} -> {webp_size:,} bytes "
-                          f"(saved {saved_percent:.1f}%)")
+                # Логируем результат конвертации
+                if saved > 0:
+                    logger.info(f"Converted {source_path.name}: "
+                              f"{original_size:,} -> {webp_size:,} bytes "
+                              f"(saved {saved_percent:.1f}%)")
+                else:
+                    logger.warning(f"Converted {source_path.name}: "
+                                 f"{original_size:,} -> {webp_size:,} bytes "
+                                 f"(increased by {abs(saved_percent):.1f}%)")
                 
                 # Store metadata in Redis if available
                 if redis_client:

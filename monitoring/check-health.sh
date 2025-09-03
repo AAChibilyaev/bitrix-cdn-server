@@ -56,7 +56,14 @@ check_mount() {
             
             # Пытаемся перемонтировать
             echo "Attempting to remount..."
-            systemctl restart sshfs-mount
+            if command -v systemctl &> /dev/null; then
+                systemctl restart sshfs-mount
+            elif command -v docker &> /dev/null; then
+                docker restart cdn-sshfs
+            else
+                echo -e "${RED}✗ Cannot restart mount service${NC}"
+                return 1
+            fi
             sleep 5
             
             if timeout 5 ls "$MOUNT_POINT" > /dev/null 2>&1; then
@@ -190,8 +197,8 @@ check_conversion() {
 check_network() {
     echo -e "${YELLOW}Checking network connectivity...${NC}"
     
-    # Пинг до сервера Битрикс
-    local bitrix_host="bitrix-server-ip"
+    # Пинг до сервера Битрикс (берём из переменной окружения или конфига)
+    local bitrix_host="${BITRIX_SERVER_IP:-192.168.1.10}"
     
     if ping -c 1 -W 2 "$bitrix_host" > /dev/null 2>&1; then
         echo -e "${GREEN}✓ Network to Bitrix server OK${NC}"

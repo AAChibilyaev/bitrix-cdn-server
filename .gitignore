@@ -43,9 +43,15 @@ Thumbs.db
 .project
 .classpath
 
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
 # Test files
 test.html
-TEST_REPORT.md
 /tmp/
 
 # Config files with sensitive data
@@ -54,7 +60,6 @@ config.sh
 
 # Docker override files
 docker-compose.override.yml
-docker-compose.local.yml
 
 # Temporary files
 *.tmp
