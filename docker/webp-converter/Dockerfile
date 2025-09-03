@@ -1,4 +1,8 @@
-FROM alpine:3.18
+FROM alpine:3.19
+
+# Создание непривилегированного пользователя
+RUN addgroup -g 1000 webp && \
+    adduser -D -s /bin/sh -u 1000 -G webp webp
 
 # Установка необходимых пакетов
 RUN apk add --no-cache \
@@ -19,18 +23,19 @@ RUN pip3 install --no-cache-dir \
     Pillow \
     watchdog
 
-# Создание директорий
-RUN mkdir -p /var/cache/webp \
-    /var/log/converter \
-    /app
+# Создание директорий с правильными правами
+RUN mkdir -p /var/cache/webp /var/log/converter /app && \
+    chown -R webp:webp /var/cache/webp /var/log/converter /app
 
 # Копирование скриптов
-COPY converter.py /app/converter.py
-COPY entrypoint.sh /app/entrypoint.sh
+COPY --chown=webp:webp converter.py /app/converter.py
+COPY --chown=webp:webp entrypoint.sh /app/entrypoint.sh
 
 # Установка прав
-RUN chmod +x /app/entrypoint.sh \
-    && chmod +x /app/converter.py
+RUN chmod +x /app/entrypoint.sh /app/converter.py
+
+# Переключение на непривилегированного пользователя
+USER webp
 
 WORKDIR /app
 

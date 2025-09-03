@@ -14,13 +14,15 @@ backend default {
     .between_bytes_timeout = 10s;
     .max_connections = 50;
     
-    # Health check
+    # Health check согласно официальной документации Varnish 6.0
     .probe = {
         .url = "/health";
         .timeout = 2s;
         .interval = 5s;
         .window = 5;
         .threshold = 3;
+        .initial = 2;  # Добавлено: количество успешных проб при старте
+        .expected_response = 200;  # Добавлено: ожидаемый HTTP код
     }
 }
 
@@ -28,7 +30,7 @@ backend default {
 acl purge {
     "localhost";
     "127.0.0.1";
-    "172.25.0.0"/24;  # Docker network
+    "172.25.0.0/24";  # Docker network - правильный CIDR синтаксис
 }
 
 # Обработка входящих запросов
@@ -45,13 +47,18 @@ sub vcl_recv {
     # PURGE запросы для очистки кеша
     if (req.method == "PURGE") {
         if (!client.ip ~ purge) {
-            return(synth(405, "Not allowed."));
+            return(synth(405, "Method Not Allowed"));
         }
         return (purge);
     }
     
-    # Разрешаем только GET и HEAD
-    if (req.method != "GET" && req.method != "HEAD") {
+    # Обработка OPTIONS для CORS
+    if (req.method == "OPTIONS") {
+        return(synth(200, "OK"));
+    }
+    
+    # Разрешаем только GET, HEAD, OPTIONS
+    if (req.method != "GET" && req.method != "HEAD" && req.method != "OPTIONS") {
         return (pass);
     }
     

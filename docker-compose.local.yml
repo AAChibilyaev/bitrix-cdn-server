@@ -1,20 +1,20 @@
-# Simplified development version without monitoring
+# Local testing version for MacBook without SSHFS
 services:
   # NGINX
   nginx:
     image: nginx:1.27-alpine
-    container_name: cdn-nginx-dev
+    container_name: cdn-nginx-local
     ports:
       - "8080:80"
     volumes:
       - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
-      - bitrix-files:/mnt/bitrix:ro
+      # Mount local test directory instead of SSHFS
+      - /tmp/test-upload:/mnt/bitrix:ro
       - webp-cache:/var/cache/webp
       - ./logs/nginx:/var/log/nginx
     depends_on:
       - webp-converter
-      - sshfs
     networks:
       - cdn-network
     environment:
@@ -25,9 +25,10 @@ services:
     build: 
       context: ./docker/webp-converter
       dockerfile: Dockerfile
-    container_name: cdn-webp-dev
+    container_name: cdn-webp-local
     volumes:
-      - bitrix-files:/mnt/bitrix:ro
+      # Mount local test directory
+      - /tmp/test-upload:/mnt/bitrix:ro
       - webp-cache:/var/cache/webp
       - ./logs/converter:/var/log/converter
     environment:
@@ -36,42 +37,15 @@ services:
       - MAX_HEIGHT=2048
       - CACHE_DIR=/var/cache/webp
       - SOURCE_DIR=/mnt/bitrix
-      - REDIS_HOST=redis
-    networks:
-      - cdn-network
-    depends_on:
-      - redis
-
-  # SSHFS
-  sshfs:
-    build:
-      context: ./docker/sshfs
-      dockerfile: Dockerfile
-    container_name: cdn-sshfs-dev
-    privileged: true
-    cap_add:
-      - SYS_ADMIN
-    devices:
-      - /dev/fuse
-    volumes:
-      - ./docker/ssh:/root/.ssh:ro
-      - bitrix-files:/mnt/bitrix:shared
-      - ./logs/sshfs:/var/log/sshfs
-    environment:
-      - REMOTE_HOST=${BITRIX_SERVER_IP}
-      - REMOTE_USER=${BITRIX_SERVER_USER}
-      - REMOTE_PATH=${BITRIX_UPLOAD_PATH}
-      - MOUNT_POINT=/mnt/bitrix
-      - SSH_KEY=/root/.ssh/bitrix_mount
     networks:
       - cdn-network
 
-  # Redis
+  # Redis for metadata
   redis:
     image: redis:7.4-alpine
-    container_name: cdn-redis-dev
+    container_name: cdn-redis-local
     ports:
-      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:6380:6379"
     volumes:
       - redis-data:/data
     networks:
@@ -79,8 +53,6 @@ services:
     command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
 
 volumes:
-  bitrix-files:
-    driver: local
   webp-cache:
     driver: local
   redis-data:

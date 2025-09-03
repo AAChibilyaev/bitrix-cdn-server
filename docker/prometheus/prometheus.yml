@@ -32,10 +32,10 @@ scrape_configs:
           service: 'nginx'
           cdn: 'termokit'
 
-  # Redis monitoring (через Redis exporter если добавим)
+  # Redis monitoring через Redis Exporter
   - job_name: 'redis'
     static_configs:
-      - targets: ['redis:6379']
+      - targets: ['redis-exporter:9121']
         labels:
           service: 'redis'
           cdn: 'termokit'
@@ -54,4 +54,12 @@ scrape_configs:
       - targets: ['webp-converter:9090']
         labels:
           service: 'webp-converter'
+          cdn: 'termokit'
+  
+  # Node Exporter для системных метрик
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'system'
           cdn: 'termokit'

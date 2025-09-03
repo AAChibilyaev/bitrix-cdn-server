@@ -11,7 +11,7 @@ Group=root
 # Команда монтирования
 ExecStart=/usr/bin/sshfs \
     -o allow_other,default_permissions,ro,cache=yes,kernel_cache,compression=no,large_read,big_writes,ServerAliveInterval=15,ServerAliveCountMax=3,reconnect,IdentityFile=/root/.ssh/bitrix_mount,StrictHostKeyChecking=no \
-    user@bitrix-server:/path/to/bitrix/upload /mnt/bitrix
+    ${BITRIX_SERVER_USER}@${BITRIX_SERVER_IP}:${BITRIX_UPLOAD_PATH} /mnt/bitrix
 
 # Команда размонтирования
 ExecStop=/usr/bin/fusermount -u /mnt/bitrix

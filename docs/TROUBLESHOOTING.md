@@ -5,6 +5,7 @@
 ### 1. SSHFS Mount проблемы
 
 #### Проблема: Mount point не работает
+
 **Симптомы:**
 - Команда `ls /mnt/bitrix` зависает
 - Ошибка "Transport endpoint is not connected"
@@ -26,6 +27,7 @@ ls /mnt/bitrix
 ```
 
 #### Проблема: Permission denied при монтировании
+
 **Решение:**
 ```bash
 # Проверка SSH ключа
@@ -40,6 +42,7 @@ chmod 644 /root/.ssh/bitrix_mount.pub
 ```
 
 #### Проблема: Mount отваливается периодически
+
 **Решение:**
 ```bash
 # Добавить в /etc/fstab для автомонтирования
@@ -52,6 +55,7 @@ apt install autofs
 ### 2. NGINX проблемы
 
 #### Проблема: 404 ошибки для изображений
+
 **Проверка:**
 ```bash
 # Проверка конфигурации
@@ -66,11 +70,13 @@ tail -f /var/log/nginx/error.log
 ```
 
 **Решение:**
+
 - Проверить правильность путей в nginx.conf
 - Убедиться что root директива указывает на /mnt/bitrix
 - Проверить права доступа
 
 #### Проблема: WebP не отдается
+
 **Проверка:**
 ```bash
 # Тест с заголовком Accept
@@ -81,6 +87,7 @@ curl -H "Accept: image/webp" -I https://cdn.domain.ru/test.jpg
 ```
 
 **Решение:**
+
 - Проверить установлен ли cwebp: `which cwebp`
 - Проверить права на запись в /var/cache/webp
 - Проверить логику в nginx.conf
@@ -88,6 +95,7 @@ curl -H "Accept: image/webp" -I https://cdn.domain.ru/test.jpg
 ### 3. Проблемы конвертации
 
 #### Проблема: cwebp command not found
+
 **Решение:**
 ```bash
 # Установка webp tools
@@ -99,6 +107,7 @@ cwebp -version
 ```
 
 #### Проблема: Конвертация медленная
+
 **Решение:**
 ```bash
 # Уменьшить качество в скрипте
@@ -112,6 +121,7 @@ nice -n 19 /usr/local/bin/webp-convert.sh batch
 ```
 
 #### Проблема: Кеш быстро растет
+
 **Решение:**
 ```bash
 # Настроить автоочистку
@@ -126,6 +136,7 @@ find /var/cache/webp -type f -name "*.webp" -mtime +7 -delete
 ### 4. Проблемы производительности
 
 #### Проблема: Высокая нагрузка при конвертации
+
 **Мониторинг:**
 ```bash
 htop
@@ -133,6 +144,7 @@ iotop
 ```
 
 **Решение:**
+
 ```bash
 # Ограничить количество worker процессов NGINX
 # В nginx.conf:
@@ -149,6 +161,7 @@ ulimit -n 65535
 ```
 
 #### Проблема: Медленная отдача файлов
+
 **Решение:**
 ```bash
 # Оптимизация SSHFS
@@ -168,6 +181,7 @@ client_max_body_size 100m;
 ### 5. Сетевые проблемы
 
 #### Проблема: Соединение между серверами медленное
+
 **Диагностика:**
 ```bash
 # Тест скорости
@@ -182,6 +196,7 @@ ping -M do -s 1472 bitrix-server
 ```
 
 **Решение:**
+
 - Использовать private network если возможно
 - Отключить compression в SSHFS для локальной сети
 - Оптимизировать TCP настройки
@@ -189,6 +204,7 @@ ping -M do -s 1472 bitrix-server
 ### 6. Проблемы безопасности
 
 #### Проблема: Доступ к служебным файлам
+
 **Проверка:**
 ```bash
 curl https://cdn.domain.ru/bitrix/php_interface/dbconn.php
@@ -196,6 +212,7 @@ curl https://cdn.domain.ru/bitrix/php_interface/dbconn.php
 ```
 
 **Решение:**
+
 В nginx.conf добавить:
 ```nginx
 location ~* ^/(bitrix|local)/(modules|php_interface|stack_cache|managed_cache|sessions|tmp|templates|updates|backup|webstat|upload/1c_[^/]+) {
@@ -206,6 +223,7 @@ location ~* ^/(bitrix|local)/(modules|php_interface|stack_cache|managed_cache|se
 ### 7. Проблемы с Битрикс
 
 #### Проблема: Битрикс не использует CDN
+
 **Проверка:**
 - Посмотреть исходный код страницы
 - Проверить URL изображений

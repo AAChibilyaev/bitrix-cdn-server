@@ -7,7 +7,13 @@
 
 ## 📋 О проекте
 
-**Высокопроизводительный CDN сервер** для Битрикс с автоматической конвертацией изображений в WebP формат. Снижает нагрузку на основной сервер на 95% и ускоряет загрузку изображений в 3 раза.
+**Высокопроизводительный CDN сервер** для Битрикс с автоматической конвертацией изображений в WebP формат. 
+
+⚠️ **ВАЖНО**: Это решение для ДВУХ физически разных серверов:
+- **Сервер 1**: Битрикс с оригинальными файлами в `/upload/`
+- **Сервер 2**: CDN который через SSHFS читает оригиналы и создает WebP версии в локальном кеше
+
+Снижает нагрузку на основной сервер на 95% и ускоряет загрузку изображений в 3 раза.
 
 ### ✨ Ключевые преимущества
 
@@ -44,19 +50,28 @@ cat docker/ssh/bitrix_mount.pub
 ## 📊 Архитектура
 
 ```mermaid
-graph LR
-    User[👤 Пользователь] -->|HTTP/HTTPS| CDN[CDN Server]
-    
-    subgraph CDN Server
-        NGINX[NGINX] --> Cache{Кеш WebP}
-        Cache -->|HIT| User
-        Cache -->|MISS| Converter[WebP Converter]
-        Converter --> Mount[SSHFS Mount]
-        Mount --> Bitrix[Битрикс /upload]
-        Converter --> Cache
+graph TB
+    subgraph "Сервер 1 - Битрикс"
+        Upload["/var/www/bitrix/upload/<br/>Оригиналы изображений"]
+        PHP[PHP/MySQL]
     end
     
-    Monitoring[📊 Grafana] -.-> CDN
+    subgraph "Сервер 2 - CDN"
+        Mount["/mnt/bitrix/upload/<br/>SSHFS Mount (READ-ONLY)"]
+        WebPCache["/var/cache/webp/<br/>Локальные WebP версии"]
+        NGINX[NGINX]
+        Converter[WebP Converter]
+    end
+    
+    User[👤 Пользователь]
+    
+    Upload -.->|SSH mount| Mount
+    User -->|Запрос изображения| NGINX
+    NGINX -->|Проверка кеша| WebPCache
+    WebPCache -->|HIT| User
+    NGINX -->|MISS| Converter
+    Converter -->|Читает| Mount
+    Converter -->|Сохраняет| WebPCache
 ```
 
 ## 🛠️ Компоненты системы
@@ -153,10 +168,10 @@ function ReplaceCDNImages(&$content) {
 
 После запуска доступны:
 
-- **Grafana Dashboard**: http://localhost:3000
-- **Prometheus Metrics**: http://localhost:9090
-- **Health Check**: http://cdn.yourdomain.ru/health
-- **NGINX Status**: http://cdn.yourdomain.ru/nginx_status
+- **Grafana Dashboard**: `http://localhost:3000`
+- **Prometheus Metrics**: `http://localhost:9090`
+- **Health Check**: `http://cdn.yourdomain.ru/health`
+- **NGINX Status**: `http://cdn.yourdomain.ru/nginx_status`
 
 ## 🤝 Поддержка
 
