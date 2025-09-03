@@ -216,13 +216,9 @@ services:
       - sshfs
 
 volumes:
-  # Примонтированные файлы Битрикс
+  # Примонтированные файлы Битрикс (монтируется через SSHFS контейнер)
   bitrix-files:
     driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /mnt/bitrix
   
   # Кеш WebP файлов
   webp-cache:
