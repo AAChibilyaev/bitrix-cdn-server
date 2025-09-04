@@ -1,5 +1,7 @@
 # 🏗️ Архитектура Битрикс CDN Server
 
+**Автор**: Chibilyaev Alexandr | **AAChibilyaev LTD** | info@aachibilyaev.com
+
 ## ⚠️ КРИТИЧЕСКИ ВАЖНО: Два физически разных сервера!
 
 ### 📍 Сервер 1 - Битрикс (основной)
@@ -26,39 +28,40 @@ graph TB
     subgraph "⚡ CDN Server"
         subgraph "🐳 Docker Network 172.25.0.0/24"
             subgraph "Frontend Layer"
-                NG[NGINX<br/>:80/:443<br/>172.25.0.2]
-                VN[Varnish Cache<br/>:8080<br/>172.25.0.3]
+                NG[NGINX<br/>:80/:443<br/>cdn-nginx]
+                VN[Varnish Cache<br/>:8080<br/>cdn-varnish]
             end
             
             subgraph "Processing Layer"
-                WC[WebP Converter<br/>Python Service<br/>172.25.0.4]
-                SF[SSHFS Mount<br/>172.25.0.5]
+                WC[WebP Converter<br/>Python Service<br/>cdn-webp-converter]
+                SF[SSHFS Mount<br/>cdn-sshfs]
             end
             
             subgraph "Storage Layer"
-                RD[Redis<br/>:6379<br/>172.25.0.6]
+                RD[Redis<br/>:6379<br/>cdn-redis]
                 CACHE[(WebP Cache<br/>/var/cache/webp)]
                 MOUNT[(Mounted Files<br/>/mnt/bitrix)]
             end
             
             subgraph "Monitoring Layer"
-                PR[Prometheus<br/>:9090<br/>172.25.0.10]
-                GR[Grafana<br/>:3000<br/>172.25.0.11]
-                HC[Health Check<br/>172.25.0.12]
-                NE[NGINX Exporter<br/>:9113<br/>172.25.0.13]
+                PR[Prometheus<br/>:9090<br/>cdn-prometheus]
+                GR[Grafana<br/>:3000<br/>cdn-grafana]
+                NE[NGINX Exporter<br/>:9113<br/>cdn-nginx-exporter]
+                RE[Redis Exporter<br/>:9121<br/>cdn-redis-exporter]
+                NODE[Node Exporter<br/>:9100<br/>cdn-node-exporter]
             end
             
             subgraph "SSL Layer"
-                CB[Certbot<br/>172.25.0.14]
+                CB[Certbot<br/>cdn-certbot]
                 SSL[(SSL Certs<br/>/etc/letsencrypt)]
             end
         end
     end
     
-    U -->|HTTPS/443| NG
+    U[👤 Пользователь] -->|HTTPS/443| NG
     NG --> VN
     VN --> CACHE
-    NG --> WC
+    NG -->|map $webp_suffix| WC
     WC --> MOUNT
     SF -->|SSH/22| B
     WC --> RD
@@ -68,12 +71,12 @@ graph TB
     PR --> NG
     PR --> WC
     PR --> RD
-    PR --> NE
+    PR --> RE
+    PR --> NODE
     NE --> NG
+    RE --> RD
+    NODE --> NG
     GR --> PR
-    HC --> NG
-    HC --> SF
-    HC --> WC
 ```
 
 ## 🔄 Компоненты и их взаимодействие
@@ -90,12 +93,21 @@ graph TB
   - Rate limiting и защита от DDoS
 
 ```nginx
-# Основная логика обработки
-location ~* \.(jpg|jpeg|png|gif)$ {
-    if ($http_accept ~* "webp") {
-        try_files /var/cache/webp$uri.webp @convert_webp;
-    }
-    try_files /mnt/bitrix$uri =404;
+# Основная логика обработки (без if в location - nginx.org best practice)
+map $http_accept $webp_suffix {
+    default "";
+    "~*image/webp" ".webp";
+}
+
+location ~* \.(jpg|jpeg|png|gif|bmp)$ {
+    # Пробуем WebP версию, затем оригинал
+    try_files /var/cache/webp$uri$webp_suffix $uri @webp_convert;
+}
+
+location @webp_convert {
+    # Проксирование на WebP конвертер
+    proxy_pass http://webp-converter:8080;
+    proxy_set_header X-Original-URI $request_uri;
 }
 ```
 
@@ -259,7 +271,7 @@ services:
 ## 🔧 Конфигурационные файлы
 
 ```
-bitrix-cdn-server/
+bitrix-cdn/
 ├── docker-compose.yml           # Основная конфигурация
 ├── docker-compose.prod.yml      # Production overrides
 ├── docker-compose.scale.yml     # Scaling configuration

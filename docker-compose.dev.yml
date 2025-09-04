@@ -1,3 +1,6 @@
+# Bitrix CDN Server - Development Configuration  
+# Author: Chibilyaev Alexandr <info@aachibilyaev.com>
+# Company: AAChibilyaev LTD
 # Simplified development version without monitoring
 services:
   # NGINX
@@ -31,12 +34,13 @@ services:
       - webp-cache:/var/cache/webp
       - ./logs/converter:/var/log/converter
     environment:
-      - WEBP_QUALITY=85
-      - MAX_WIDTH=2048
-      - MAX_HEIGHT=2048
+      - WEBP_QUALITY=${WEBP_QUALITY:-85}
+      - MAX_WIDTH=${WEBP_MAX_WIDTH:-2048}
+      - MAX_HEIGHT=${WEBP_MAX_HEIGHT:-2048}
       - CACHE_DIR=/var/cache/webp
       - SOURCE_DIR=/mnt/bitrix
       - REDIS_HOST=redis
+      - REDIS_PORT=6379
     networks:
       - cdn-network
     depends_on:

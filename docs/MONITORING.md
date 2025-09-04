@@ -1,5 +1,7 @@
 # 📊 Мониторинг CDN системы
 
+**Автор**: Chibilyaev Alexandr | **AAChibilyaev LTD** | info@aachibilyaev.com
+
 ## 🎯 Обзор системы мониторинга
 
 Полный стек мониторинга включает:

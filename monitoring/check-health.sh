@@ -1,11 +1,13 @@
 #!/bin/bash
 # Скрипт проверки состояния CDN сервера
 # /usr/local/bin/check-cdn-health.sh
+# Author: Chibilyaev Alexandr <info@aachibilyaev.com>
+# Company: AAChibilyaev LTD
 
 # Конфигурация
 MOUNT_POINT="/mnt/bitrix"
 CACHE_DIR="/var/cache/webp"
-ALERT_EMAIL="admin@yourdomain.ru"
+ALERT_EMAIL="info@aachibilyaev.com"
 LOG_FILE="/var/log/cdn/health.log"
 NGINX_STATUS_URL="http://127.0.0.1/nginx_status"
 
@@ -232,7 +234,8 @@ check_performance() {
     local load1=$(echo "$load" | cut -d, -f1 | xargs)
     local cpu_count=$(nproc)
     
-    if (( $(echo "$load1 < $cpu_count" | bc -l) )); then
+    # ИСПРАВЛЕНО: Используем awk вместо bc
+    if awk "BEGIN {exit !($load1 < $cpu_count)}"; then
         echo -e "${GREEN}✓ Load is normal${NC}"
     else
         echo -e "${YELLOW}⚠ High load detected${NC}"

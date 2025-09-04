@@ -1,6 +1,8 @@
 #!/bin/bash
 # Скрипт конвертации изображений в WebP
 # /usr/local/bin/webp-convert.sh
+# Author: Chibilyaev Alexandr <info@aachibilyaev.com>
+# Company: AAChibilyaev LTD
 
 # Конфигурация
 MOUNT_DIR="/mnt/bitrix"
@@ -26,7 +28,7 @@ get_mime_type() {
     file --mime-type -b "$1"
 }
 
-# Конвертация одного файла
+# ИСПРАВЛЕНО: Конвертация одного файла  
 convert_to_webp() {
     local source_file="$1"
     local relative_path="${source_file#$MOUNT_DIR}"

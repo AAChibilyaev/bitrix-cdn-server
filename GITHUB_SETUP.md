@@ -3,11 +3,11 @@
 ## Инструкция по публикации на GitHub
 
 ### 1. Создайте новый репозиторий на GitHub
-Перейдите на https://github.com/new и создайте новый репозиторий с названием `bitrix-cdn-server`
+Перейдите на https://github.com/new и создайте новый репозиторий с названием `bitrix-cdn`
 
 ### 2. Добавьте удаленный репозиторий
 ```bash
-git remote add origin https://github.com/YOUR_USERNAME/bitrix-cdn-server.git
+git remote add origin https://github.com/AAChibilyaev/bitrix-cdn.git
 ```
 
 ### 3. Отправьте код на GitHub

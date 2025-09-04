@@ -47,11 +47,11 @@ scrape_configs:
         labels:
           service: 'docker'
 
-  # Custom CDN metrics endpoint (если добавим)
-  - job_name: 'cdn-metrics'
+  # ИСПРАВЛЕНО: WebP Converter HTTP API metrics
+  - job_name: 'webp-converter'
     metrics_path: '/metrics'
     static_configs:
-      - targets: ['webp-converter:9090']
+      - targets: ['webp-converter:8080']
         labels:
           service: 'webp-converter'
           cdn: 'termokit'

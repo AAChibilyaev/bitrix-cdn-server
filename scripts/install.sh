@@ -1,6 +1,8 @@
 #!/bin/bash
 # Автоматический установщик CDN сервера для Битрикс
 # /scripts/install.sh
+# Author: Chibilyaev Alexandr <info@aachibilyaev.com>
+# Company: AAChibilyaev LTD
 
 set -e  # Останавливаться при ошибках
 
@@ -11,12 +13,13 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-# Конфигурация (нужно изменить!)
-BITRIX_SERVER_IP=""
-BITRIX_SERVER_USER=""
-BITRIX_UPLOAD_PATH="/var/www/bitrix/upload"
-CDN_DOMAIN=""
-ADMIN_EMAIL=""
+# ИСПРАВЛЕНО: Конфигурация из config.sh
+if [ -f "config.sh" ]; then
+    source config.sh
+else
+    echo -e "${RED}config.sh not found. Copy from config.sh.example and edit${NC}"
+    exit 1
+fi
 
 # Функции вывода
 print_step() {
@@ -345,8 +348,8 @@ print_instructions() {
     echo "   tail -f /var/log/nginx/error.log"
     echo ""
     echo "Documentation:"
-    echo "   /root/bitrix-cdn-server/docs/INSTALL.md"
-    echo "   /root/bitrix-cdn-server/docs/TROUBLESHOOTING.md"
+    echo "   /root/bitrix-cdn/docs/INSTALL.md"
+    echo "   /root/bitrix-cdn/docs/TROUBLESHOOTING.md"
     echo ""
 }
 

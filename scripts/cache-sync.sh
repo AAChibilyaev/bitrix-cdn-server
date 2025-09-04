@@ -1,12 +1,14 @@
 #!/bin/bash
 # Скрипт синхронизации кеша при изменении файлов на Битрикс сервере
 # Запускается на CDN сервере для очистки устаревших WebP версий
+# Author: Chibilyaev Alexandr <info@aachibilyaev.com>
+# Company: AAChibilyaev LTD
 
 set -e
 
-# Конфигурация
-MOUNT_DIR="/mnt/bitrix/upload"
-CACHE_DIR="/var/cache/webp/upload"
+# ИСПРАВЛЕНО: Конфигурация путей
+MOUNT_DIR="/mnt/bitrix"
+CACHE_DIR="/var/cache/webp"
 LOG_FILE="/var/log/cdn/cache-sync.log"
 REDIS_HOST="redis"
 CHECK_INTERVAL=60  # Проверка каждые 60 секунд
@@ -25,8 +27,8 @@ log_message() {
 # Функция проверки изменений
 check_file_changes() {
     local original_file="$1"
-    local relative_path="${original_file#$MOUNT_DIR/}"
-    local webp_file="$CACHE_DIR/${relative_path}.webp"
+    local relative_path="${original_file#$MOUNT_DIR}"
+    local webp_file="$CACHE_DIR${relative_path}.webp"
     
     if [ -f "$webp_file" ]; then
         # Получаем время модификации файлов
@@ -58,10 +60,10 @@ cleanup_orphaned() {
     
     # Находим все WebP файлы в кеше
     find "$CACHE_DIR" -name "*.webp" -type f | while read webp_file; do
-        # Получаем путь к оригиналу
-        relative_path="${webp_file#$CACHE_DIR/}"
+        # ИСПРАВЛЕНО: Получаем путь к оригиналу
+        relative_path="${webp_file#$CACHE_DIR}"
         relative_path="${relative_path%.webp}"
-        original_file="$MOUNT_DIR/$relative_path"
+        original_file="$MOUNT_DIR$relative_path"
         
         # Если оригинал не существует - удаляем WebP
         if [ ! -f "$original_file" ]; then

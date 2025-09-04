@@ -1,5 +1,7 @@
 # Устранение неполадок CDN сервера
 
+**Автор**: Chibilyaev Alexandr | **AAChibilyaev LTD** | info@aachibilyaev.com
+
 ## Частые проблемы и решения
 
 ### 1. SSHFS Mount проблемы

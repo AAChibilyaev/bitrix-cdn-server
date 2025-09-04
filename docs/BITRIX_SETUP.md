@@ -1,5 +1,7 @@
 # 🔧 Интеграция CDN с Битрикс
 
+**Автор**: Chibilyaev Alexandr | **AAChibilyaev LTD** | info@aachibilyaev.com
+
 ## 📋 Содержание
 
 1. [Быстрая настройка](#быстрая-настройка)
@@ -23,7 +25,18 @@ define("BX_IMG_SERVER", "https://cdn.termokit.ru");
 AddEventHandler("main", "OnEndBufferContent", "ReplaceCDNImages");
 
 function ReplaceCDNImages(&$content) {
-    // Заменяем пути к изображениям на CDN
+    // ВАЖНО: Заменяем домен ТОЛЬКО для обычных пользователей (не для админов)
+    if (defined('ADMIN_SECTION') && ADMIN_SECTION === true) {
+        return; // Не заменяем в админке
+    }
+    
+    // Проверяем, что мы не в админской зоне
+    if (strpos($_SERVER['REQUEST_URI'], '/bitrix/admin/') !== false ||
+        strpos($_SERVER['REQUEST_URI'], '/local/admin/') !== false) {
+        return; // Не заменяем для админских страниц
+    }
+    
+    // Заменяем пути к изображениям на CDN только для обычных посетителей
     $content = str_replace(
         'src="/upload/',
         'src="https://cdn.termokit.ru/upload/',
@@ -198,9 +211,19 @@ class CDNHelper {
             return false;
         }
         
-        // Не для админки
+        // КРИТИЧНО: Не для админки и админских страниц
         if (defined('ADMIN_SECTION') && ADMIN_SECTION === true) {
             return false;
+        }
+        
+        // Дополнительная проверка админских URL
+        if (isset($_SERVER['REQUEST_URI'])) {
+            $uri = $_SERVER['REQUEST_URI'];
+            if (strpos($uri, '/bitrix/admin/') !== false ||
+                strpos($uri, '/local/admin/') !== false ||
+                strpos($uri, '/bitrix/tools/') !== false) {
+                return false;
+            }
         }
         
         // Не для локальной разработки
