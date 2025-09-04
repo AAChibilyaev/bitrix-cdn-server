@@ -74,6 +74,8 @@ services:
       - MAX_HEIGHT=${WEBP_MAX_HEIGHT:-2048}
       - CACHE_DIR=/var/cache/webp
       - SOURCE_DIR=/mnt/bitrix
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     networks:
       - cdn-network
     # Ограничение ресурсов для конвертера

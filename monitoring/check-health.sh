@@ -234,7 +234,8 @@ check_performance() {
     local load1=$(echo "$load" | cut -d, -f1 | xargs)
     local cpu_count=$(nproc)
     
-    if (( $(echo "$load1 < $cpu_count" | bc -l) )); then
+    # ИСПРАВЛЕНО: Используем awk вместо bc
+    if awk "BEGIN {exit !($load1 < $cpu_count)}"; then
         echo -e "${GREEN}✓ Load is normal${NC}"
     else
         echo -e "${YELLOW}⚠ High load detected${NC}"

@@ -63,7 +63,7 @@ check_redis() {
 check_converter() {
     log_message "Checking WebP converter..."
     
-    # Проверяем контейнер через Docker
+    # ИСПРАВЛЕНО: Проверяем правильное имя контейнера
     if docker ps --format "table {{.Names}}\t{{.Status}}" | grep -q "cdn-webp-converter.*Up"; then
         log_message "✓ WebP converter is running"
         

@@ -4,10 +4,10 @@
 # Author: Chibilyaev Alexandr <info@aachibilyaev.com>
 # Company: AAChibilyaev LTD
 
-# Конфигурация
-REMOTE_USER="user"
-REMOTE_HOST="bitrix-server-ip"
-REMOTE_PATH="/var/www/bitrix/upload"
+# ИСПРАВЛЕНО: Конфигурация из переменных окружения
+REMOTE_USER="${BITRIX_SERVER_USER:-www-data}"
+REMOTE_HOST="${BITRIX_SERVER_IP:-192.168.1.10}"
+REMOTE_PATH="${BITRIX_UPLOAD_PATH:-/var/www/bitrix/upload}"
 LOCAL_MOUNT="/mnt/bitrix"
 SSH_KEY="/root/.ssh/bitrix_mount"
 LOG_FILE="/var/log/cdn/mount.log"

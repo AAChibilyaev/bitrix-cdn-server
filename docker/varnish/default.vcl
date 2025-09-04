@@ -14,15 +14,13 @@ backend default {
     .between_bytes_timeout = 10s;
     .max_connections = 50;
     
-    # Health check согласно официальной документации Varnish 6.0
+    # ИСПРАВЛЕНО: Health check (убраны несовместимые опции)
     .probe = {
         .url = "/health";
         .timeout = 2s;
         .interval = 5s;
         .window = 5;
         .threshold = 3;
-        .initial = 2;  # Добавлено: количество успешных проб при старте
-        .expected_response = 200;  # Добавлено: ожидаемый HTTP код
     }
 }
 

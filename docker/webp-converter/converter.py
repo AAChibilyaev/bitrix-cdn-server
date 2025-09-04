@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-WebP Converter Service
-Monitors directories and converts images to WebP format on demand
+WebP Converter HTTP Service
+HTTP API для конвертации изображений в WebP + File watcher
 
 Author: Chibilyaev Alexandr <info@aachibilyaev.com>
 Company: AAChibilyaev LTD
@@ -13,8 +13,12 @@ import time
 import hashlib
 import subprocess
 import logging
+import threading
 from pathlib import Path
 from typing import Optional, Tuple
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import urllib.parse
+import json
 import redis
 from PIL import Image
 from watchdog.observers import Observer
@@ -243,25 +247,153 @@ class ImageEventHandler(FileSystemEventHandler):
                         redis_client.delete(f"webp:{path}")
 
 
-def main():
-    """Main converter loop"""
-    logger.info("Starting WebP Converter Service")
-    logger.info(f"Source: {SOURCE_DIR}")
-    logger.info(f"Cache: {CACHE_DIR}")
-    logger.info(f"Quality: {QUALITY}")
+class ConversionRequestHandler(BaseHTTPRequestHandler):
+    """HTTP handler для запросов конвертации"""
     
-    # Create converter
-    converter = WebPConverter()
+    def __init__(self, *args, converter=None, **kwargs):
+        self.converter = converter
+        super().__init__(*args, **kwargs)
     
-    # Initial conversion of existing files
-    if SOURCE_DIR.exists():
-        logger.info("Starting initial conversion...")
-        converter.convert_directory(SOURCE_DIR)
-        converter.show_stats()
-    else:
-        logger.warning(f"Source directory not found: {SOURCE_DIR}")
+    def do_GET(self):
+        """Handle GET request для конвертации"""
+        try:
+            # Парсим URL
+            parsed = urllib.parse.urlparse(self.path)
+            
+            if parsed.path == '/health':
+                self.send_health_response()
+                return
+            elif parsed.path == '/metrics':
+                self.send_metrics_response()
+                return
+            elif parsed.path.startswith('/convert'):
+                # Получаем путь к файлу из URL
+                image_path = parsed.path.replace('/convert', '')
+                self.handle_conversion(image_path)
+                return
+            else:
+                self.send_error(404, "Not Found")
+                
+        except Exception as e:
+            logger.error(f"Request error: {e}")
+            self.send_error(500, str(e))
     
-    # Setup file system observer
+    def handle_conversion(self, image_path: str):
+        """Handle image conversion request"""
+        try:
+            # Проверяем Accept header для WebP
+            accept_header = self.headers.get('Accept', '')
+            if 'image/webp' not in accept_header:
+                # Браузер не поддерживает WebP, отдаём оригинал
+                self.serve_original(image_path)
+                return
+            
+            source_path = SOURCE_DIR / image_path.lstrip('/')
+            
+            if not source_path.exists():
+                self.send_error(404, "Image not found")
+                return
+            
+            # Конвертируем в WebP
+            webp_path = self.converter.convert_image(source_path)
+            
+            if webp_path and webp_path.exists():
+                self.serve_webp_file(webp_path)
+            else:
+                # Если конвертация не удалась, отдаём оригинал
+                self.serve_original_file(source_path)
+                
+        except Exception as e:
+            logger.error(f"Conversion error: {e}")
+            self.send_error(500, "Conversion failed")
+    
+    def serve_webp_file(self, file_path: Path):
+        """Serve WebP file"""
+        self.send_response(200)
+        self.send_header('Content-Type', 'image/webp')
+        self.send_header('Content-Length', str(file_path.stat().st_size))
+        self.send_header('Cache-Control', 'public, max-age=31536000')
+        self.end_headers()
+        
+        with open(file_path, 'rb') as f:
+            self.wfile.write(f.read())
+    
+    def serve_original_file(self, file_path: Path):
+        """Serve original file"""
+        content_type = {
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg', 
+            '.png': 'image/png',
+            '.gif': 'image/gif',
+            '.bmp': 'image/bmp'
+        }.get(file_path.suffix.lower(), 'application/octet-stream')
+        
+        self.send_response(200)
+        self.send_header('Content-Type', content_type)
+        self.send_header('Content-Length', str(file_path.stat().st_size))
+        self.send_header('Cache-Control', 'public, max-age=31536000')
+        self.end_headers()
+        
+        with open(file_path, 'rb') as f:
+            self.wfile.write(f.read())
+    
+    def serve_original(self, image_path: str):
+        """Redirect to original file"""
+        self.send_response(302)
+        self.send_header('Location', f'/mnt/bitrix{image_path}')
+        self.end_headers()
+    
+    def send_health_response(self):
+        """Health check response"""
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        
+        health = {
+            'status': 'healthy',
+            'uptime': int(time.time()),
+            'stats': self.converter.stats if self.converter else {}
+        }
+        self.wfile.write(json.dumps(health).encode())
+    
+    def send_metrics_response(self):
+        """Prometheus metrics"""
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/plain')
+        self.end_headers()
+        
+        if self.converter:
+            metrics = f"""# HELP webp_conversions_total Total WebP conversions
+# TYPE webp_conversions_total counter
+webp_conversions_total{{result="success"}} {self.converter.stats['converted']}
+webp_conversions_total{{result="failed"}} {self.converter.stats['failed']}
+webp_conversions_total{{result="skipped"}} {self.converter.stats['skipped']}
+
+# HELP webp_bytes_saved_total Total bytes saved by WebP
+# TYPE webp_bytes_saved_total counter
+webp_bytes_saved_total {self.converter.stats['total_saved']}
+"""
+        else:
+            metrics = "# No converter available\n"
+        
+        self.wfile.write(metrics.encode())
+    
+    def log_message(self, format, *args):
+        """Suppress default HTTP logging"""
+        pass
+
+
+def start_http_server(converter: WebPConverter):
+    """Start HTTP server for conversion API"""
+    handler = lambda *args, **kwargs: ConversionRequestHandler(*args, converter=converter, **kwargs)
+    
+    server = HTTPServer(('0.0.0.0', 8080), handler)
+    logger.info("HTTP server started on port 8080")
+    server.serve_forever()
+
+
+def start_file_watcher(converter: WebPConverter):
+    """Start file system watcher"""
     event_handler = ImageEventHandler(converter)
     observer = Observer()
     
@@ -269,26 +401,48 @@ def main():
         observer.schedule(event_handler, str(SOURCE_DIR), recursive=True)
         observer.start()
         logger.info("File system observer started")
-    
-    try:
-        # Main loop
-        while True:
-            time.sleep(60)
-            
-            # Periodic cleanup
-            if converter.stats['converted'] % 100 == 0:
-                converter.cleanup_orphaned()
-            
-            # Show stats every hour
-            if int(time.time()) % 3600 == 0:
-                converter.show_stats()
+        
+        try:
+            while True:
+                time.sleep(300)  # 5 minutes
                 
-    except KeyboardInterrupt:
-        observer.stop()
-        logger.info("Shutting down...")
+                # Periodic cleanup
+                if converter.stats['converted'] % 100 == 0:
+                    converter.cleanup_orphaned()
+                    
+        except KeyboardInterrupt:
+            observer.stop()
+            logger.info("File watcher shutting down...")
+        
+        observer.join()
+    else:
+        logger.warning(f"Source directory not found: {SOURCE_DIR}")
+
+
+def main():
+    """Main service entry point"""
+    logger.info("Starting WebP Converter HTTP Service")
+    logger.info(f"Source: {SOURCE_DIR}")
+    logger.info(f"Cache: {CACHE_DIR}")
+    logger.info(f"Quality: {QUALITY}")
     
-    observer.join()
-    converter.show_stats()
+    # Create converter
+    converter = WebPConverter()
+    
+    # Убеждаемся что директории существуют
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    
+    # Запускаем file watcher в отдельном потоке
+    watcher_thread = threading.Thread(target=start_file_watcher, args=(converter,))
+    watcher_thread.daemon = True
+    watcher_thread.start()
+    
+    # Запускаем HTTP сервер в основном потоке
+    try:
+        start_http_server(converter)
+    except KeyboardInterrupt:
+        logger.info("Shutting down HTTP service...")
+        converter.show_stats()
 
 
 if __name__ == '__main__':

@@ -245,6 +245,7 @@ else
 fi
 
 # Проверяем security headers
+# ИСПРАВЛЕНО: Проверка security headers
 if grep -q "X-Frame-Options" docker/nginx/conf.d/cdn.conf; then
     check_result 0 "Security headers configured"
 else

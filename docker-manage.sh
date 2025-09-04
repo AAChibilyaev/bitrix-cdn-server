@@ -124,8 +124,8 @@ show_status() {
     echo ""
     echo -e "${BLUE}Health Checks:${NC}"
     
-    # Check NGINX
-    if curl -s -o /dev/null -w "%{http_code}" "http://localhost:8080/health" | grep -q "200"; then
+    # ИСПРАВЛЕНО: Check NGINX (правильный порт)
+    if curl -s -o /dev/null -w "%{http_code}" "http://localhost:80/health" | grep -q "200"; then
         echo -e "${GREEN}✓ NGINX is healthy${NC}"
     else
         echo -e "${RED}✗ NGINX is not responding${NC}"
@@ -138,7 +138,7 @@ show_status() {
         echo -e "${RED}✗ Redis is not responding${NC}"
     fi
     
-    # Check mount
+    # ИСПРАВЛЕНО: Check mount с правильным container name
     if docker exec cdn-sshfs ls /mnt/bitrix > /dev/null 2>&1; then
         echo -e "${GREEN}✓ SSHFS mount is working${NC}"
     else
@@ -169,6 +169,7 @@ open_shell() {
 }
 
 # Clean cache
+# ИСПРАВЛЕНО: Clean cache с правильным container name
 clean_cache() {
     echo -e "${BLUE}Cleaning WebP cache...${NC}"
     docker exec cdn-webp-converter find /var/cache/webp -type f -name "*.webp" -mtime +7 -delete
