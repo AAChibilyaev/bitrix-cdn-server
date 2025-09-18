@@ -210,11 +210,11 @@ echo ""
 echo -e "${BLUE}9. Two-Server Architecture Check${NC}"
 echo "----------------------------------------"
 
-# Проверяем что SSHFS настроен как read-only mount
-if grep -q "ro" docker-compose.yml | grep -q "bitrix-files"; then
-    check_result 0 "SSHFS mount configured as read-only"
+# Проверяем что webp-converter монтирует bitrix-files как read-only (SSHFS нужен write для монтирования)
+if grep -A 10 -B 5 "webp-converter:" docker-compose.yml | grep -q "bitrix-files.*:ro"; then
+    check_result 0 "WebP converter mount configured as read-only (correct)"
 else
-    check_result 1 "SSHFS mount not properly configured as read-only"
+    check_result 1 "WebP converter mount not properly configured as read-only"
 fi
 
 # Проверяем разделение путей

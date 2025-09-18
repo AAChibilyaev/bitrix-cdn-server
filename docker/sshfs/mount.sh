@@ -21,8 +21,8 @@ if [ ! -f "$SSH_KEY" ]; then
     exit 1
 fi
 
-# Set proper permissions
-chmod 600 "$SSH_KEY"
+# Permissions are set on host by docker-manage.sh
+# chmod 600 "$SSH_KEY"
 
 # Test SSH connection
 log "Testing SSH connection to $REMOTE_USER@$REMOTE_HOST..."
